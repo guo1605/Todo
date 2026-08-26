@@ -1,54 +1,45 @@
-import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getTodo } from "../services/todo";
-import type { Todo } from "../types/todo";
-import { useTodo } from "../context/TodoContext";
+import { deleteTodo_s, getTodo } from "../services/todo";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export default function TodoDetailPages() {
-  const { id } = useParams<string>();
+export default function TodoDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteTodo } = useTodo();
+  const queryClient = useQueryClient();
 
-  const [todo, setTodo] = useState<Todo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // 使用useQuery获取数据
+  const { data: todo, isPending, isError, error, refetch } = useQuery({
+    queryKey: ['todo', id],
+    queryFn: () => {
+      if (!id) throw new Error("ID 缺失");
+      return getTodo(Number(id));
+    },
+    // staleTime: 1000 * 60 * 5, // 缓存5分钟
+    enabled: !!id, // 只有当id存在时才执行查询
+  });
 
-  // 获取数据
-  useEffect(() => {
-    const fecthTodo = async () => {
-      if (!id) {
-        setError("ID 缺失");
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await getTodo(Number(id));
-        setTodo(data);
+  if (isError) {
+    console.error("获取Todo详情失败:", error);
+  };
 
-      } catch (error) {
-        console.error("获取Todo详情失败:", error);
-        setError("加载失败，请重试");
-        setTodo(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fecthTodo();
-  }, [id]);
+  // 使用useMutation处理删除操作 
+  const mutation = useMutation({
+    mutationFn: deleteTodo_s,
+    onSuccess: () => {
+      // 在成功删除Todo后，刷新Todo列表数据
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
+      navigate(`/todos`);
+    },
+    onError: (err: Error) => {
+      console.error("删除失败:", err);
+    }
+  });
 
   const handleDelete = async () => {
-    try {
-      await deleteTodo(Number(id));
-      navigate(`/todos`);
-    } catch (err) {
-      console.error("删除失败:", err);
-      alert("删除失败，请重试"); // 可替换为 Toast
-      setIsDeleting(false);
-    };
+    if (!todo) return;
+    if (!window.confirm(`确定要删除 "${todo.title}" 吗？`)) return;
+
+    mutation.mutate(Number(id));
   };
 
   const handleEdit = () => {
@@ -56,17 +47,17 @@ export default function TodoDetailPages() {
   };
 
   // 加载中
-  if (isLoading) {
+  if (isPending) {
     return <div>加载中...</div>;
   }
 
   // 错误或数据不存在
-  if (error || !todo) {
+  if (isError || !todo) {
     return (
       <div>
-        <p style={{ color: "red" }}>{error || "未找到该Todo"}</p>
+        <p style={{ color: "red" }}>{error?.message || "未找到该Todo"}</p>
         <button onClick={() => navigate("/todos")}>返回列表</button>
-        {error && <button onClick={() => window.location.reload()}>重试</button>}
+        {isError && <button onClick={() => refetch()}>重试</button>}
       </div>
     );
   }
@@ -79,11 +70,11 @@ export default function TodoDetailPages() {
         <p>状态：{todo.completed ? "已完成" : "进行中"}</p>
       </main>
       <footer>
-        <button onClick={handleEdit} disabled={isDeleting}>
+        <button onClick={handleEdit} disabled={mutation.isPending}>
           编辑
         </button>
-        <button onClick={handleDelete} disabled={isDeleting}>
-          {isDeleting ? "删除中..." : "删除"}
+        <button onClick={handleDelete} disabled={mutation.isPending}>
+          {mutation.isPending ? "删除中..." : "删除"}
         </button>
       </footer>
     </div>

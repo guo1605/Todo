@@ -12,7 +12,7 @@ async function handleFetch(url: string, RequestInit: RequestInit, errorInfo: str
 }
 // 获取所有Todo
 export async function getTodos(): Promise<Todo[]> {
-
+  console.log("getTodos----");
   let res = await fetch(BASE_URL);
   console.log(res);
   if (!res.ok) {

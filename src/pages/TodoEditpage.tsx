@@ -1,46 +1,63 @@
 import { useEffect, useState } from "react";
-import { getTodo } from "../services/todo";
-import type { Todo } from "../types/todo";
+import { getTodo, updateTodo_s } from "../services/todo";
 import { useNavigate, useParams } from "react-router-dom";
-import { useTodo } from "../context/TodoContext";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function TodoEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { updateTodo } = useTodo();
+  const queryClient = useQueryClient();
 
-  const [todo, setTodo] = useState<Todo | null>(null);
   const [newTitle, setNewTitle] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorInfo, setErrorInfo] = useState<string | null>(null);
 
-  // 获取数据
+  // 使用useQuery获取数据
+  const { data: todo, isPending, isError, error, refetch } = useQuery({
+    queryKey: ['todo', id],
+    queryFn: () => {
+      if (!id) throw new Error("ID 缺失");
+      return getTodo(Number(id));
+    },
+    enabled: !!id, // 只有当id存在时才执行查询
+  });
+
   useEffect(() => {
-    const fetchTodo = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await getTodo(Number(id))
-        setTodo(data);
-        setNewTitle(data.title);
-      } catch (error) {
-        console.error("获取Todo失败:", error);
-        setError("加载失败，请重试");
-        setTodo(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (todo) {
+      setNewTitle(todo.title);
+    }
+  }, [todo]);
 
-    fetchTodo();
-  }, [id]);
+  if (isError) {
+    console.error("获取Todo失败:", error);
+  }
 
+  // 使用useMutation处理保存操作
+  const mutation = useMutation({
+    mutationFn: ({ id, title }: { id: number, title: string }) => {
+      return updateTodo_s(id, { title });
+    },
+    onSuccess: () => {
+      // 在成功更新Todo后，刷新Todo列表数据
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
+      navigate(`/todos`);
+    },
+    onError: (err: Error) => {
+      console.error("更新失败:", err);
+      setErrorInfo("保存失败，请重试");
+    }
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTitle(e.target.value);
+    if (errorInfo) {
+      setErrorInfo(null);
+    }
+  }
 
   const handleUpdate = async () => {
     const trimmed = newTitle.trim();
     if (!trimmed) {
-      setError("请输入Todo内容");
+      setErrorInfo("请输入Todo内容");
       return;
     }
     if (todo && trimmed === todo.title) {
@@ -49,18 +66,8 @@ export default function TodoEditPage() {
       return;
     }
 
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await updateTodo(Number(id), trimmed)
-      navigate('/');
-
-    } catch (err) {
-      console.error("更新失败:", err);
-      setError("保存失败，请重试");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setErrorInfo(null);
+    mutation.mutate({ id: Number(id), title: trimmed });
   }
 
   // 取消
@@ -69,16 +76,18 @@ export default function TodoEditPage() {
   };
 
   // 渲染加载状态
-  if (isLoading) {
+  if (isPending) {
     return <div>加载中...</div>;
   }
 
   // 渲染错误状态（可提供重试按钮）
-  if (error && !todo) {
+  if (isError) {
     return (
       <div>
-        <p style={{ color: "red" }}>{error}</p>
-        <button onClick={() => window.location.reload()}>重试</button>
+        <p style={{ color: "red" }}>
+          {error instanceof Error ? error.message : "加载失败，请重试"}
+        </p>
+        <button onClick={() => refetch()}>重试</button>
       </div>
     );
   }
@@ -90,19 +99,19 @@ export default function TodoEditPage() {
         <label>
           Todo内容
           <input type="text" value={newTitle}
-            onChange={(e) => { setNewTitle(e.target.value); }}
-            disabled={isSubmitting}
+            onChange={handleChange}
+            disabled={mutation.isPending}
             placeholder="请输入Todo内容"
           />
         </label>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {errorInfo && <p style={{ color: "red" }}>{errorInfo}</p>}
       </div>
       <footer>
-        <button onClick={handleCancal} disabled={isSubmitting}>
+        <button onClick={handleCancal} disabled={mutation.isPending}>
           取消
         </button>
-        <button onClick={handleUpdate} disabled={isSubmitting}>
-          {isSubmitting ? "保存中..." : "保存修改"}
+        <button onClick={handleUpdate} disabled={mutation.isPending}>
+          {mutation.isPending ? "保存中..." : "保存修改"}
         </button>
       </footer>
     </div>

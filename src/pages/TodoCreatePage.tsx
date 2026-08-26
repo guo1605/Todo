@@ -1,32 +1,42 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTodo } from "../context/TodoContext";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function TodoCreatePage() {
-
   const [title, setTitle] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { addTodo } = useTodo();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async () => {
+  const mutation = useMutation({
+    mutationFn: addTodo,
+    onSuccess: () => {
+      // 在成功创建Todo后，刷新Todo列表数据
+      queryClient.invalidateQueries({
+        queryKey: ["todos"]
+      });
+      // 跳转回Todo列表页
+      navigate(`/todos`);
+    },
+    // 处理创建失败的情况
+    onError: (error: Error) => {
+      console.error("创建失败:", error);
+      setError("创建失败，请重试");
+    },
+  });
+
+  const handleSubmit = () => {
     const trimmed = title.trim();
     if (!trimmed) {
       setError('请输入Todo内容');
       return;
     }
+
     setError(null);
-    try {
-      await addTodo(title)
-      navigate(`/todos`);
-    } catch (error) {
-      console.error("创建失败:", error);
-      setError("创建失败，请重试");
-    } finally {
-      setIsSubmitting(false);
-    };
+    mutation.mutate(trimmed);
   };
 
   return (
@@ -46,9 +56,9 @@ export default function TodoCreatePage() {
       </div>
 
       <footer>
-        <button onClick={() => { navigate(-1); }} disabled={isSubmitting}>取消</button>
-        <button onClick={handleSubmit}>
-          {isSubmitting ? "创建中..." : '创建Todo'}
+        <button onClick={() => { navigate(-1); }} disabled={mutation.isPending}>取消</button>
+        <button onClick={handleSubmit} disabled={mutation.isPending}>
+          {mutation.isPending ? "创建中..." : '创建Todo'}
         </button>
       </footer>
     </div>
