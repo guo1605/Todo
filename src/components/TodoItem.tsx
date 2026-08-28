@@ -25,7 +25,7 @@ export function TodoItem(_props: TodoItemProps) {
   }
 
   return (
-    <div style={{}}>
+    <div style={{ textAlign: "left" }}>
       <input id='{todo.id}' type="checkbox" checked={todo.completed} onChange={() => { mutation.mutate(todo) }} />
       <label htmlFor="{todo.id}"></label>
       {todo.title}

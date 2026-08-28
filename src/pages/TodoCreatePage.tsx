@@ -45,6 +45,7 @@ export default function TodoCreatePage() {
     <div>
       <h1>新建Todo</h1>
       <TodoForm
+        // defaultValues={{ title: '' }}
         onSubmit={({ title }) => { handleSubmit(title); }}
         onCancel={() => {
           navigate(-1);

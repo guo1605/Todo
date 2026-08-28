@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { todoTitleSchema, type TodoFormValues } from "../schemas/todoSchema";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface TodoFormProps {
   defaultValues?: Partial<TodoFormValues>;
@@ -20,10 +20,23 @@ export function TodoForm({
     defaultValues,
   });
 
+  // ✅ 关键：标记是否是首次渲染（跳过首次 reset，因为 useForm 已经初始化了）
+  const isFirstRender = useRef(true);
+
+
   useEffect(() => {
-    reset(defaultValues);
+    // 跳过首次渲染
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (defaultValues.title?.length !== 0) {
+      reset(defaultValues);
+    }
+
   }, [defaultValues]);
-  console.log('----', defaultValues);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div>
