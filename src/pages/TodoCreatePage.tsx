@@ -1,11 +1,13 @@
-import { useState } from "react";
+// import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTodo } from "../context/TodoContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { TodoForm } from "../components/TodoForm";
+
 export default function TodoCreatePage() {
-  const [title, setTitle] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  // const [title, setTitle] = useState('');
+  // const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { addTodo } = useTodo();
@@ -24,25 +26,31 @@ export default function TodoCreatePage() {
     // 处理创建失败的情况
     onError: (error: Error) => {
       console.error("创建失败:", error);
-      setError("创建失败，请重试");
+      // setError("创建失败，请重试");
     },
   });
 
-  const handleSubmit = () => {
-    const trimmed = title.trim();
-    if (!trimmed) {
-      setError('请输入Todo内容');
-      return;
-    }
+  const handleSubmit = (title: string) => {
+    // const trimmed = title.trim();
+    // if (!trimmed) {
+    //   setError('请输入Todo内容');
+    //   return;
+    // }
 
-    setError(null);
-    mutation.mutate(trimmed);
+    // setError(null);
+    mutation.mutate(title);
   };
 
   return (
     <div>
       <h1>新建Todo</h1>
-      <div>
+      <TodoForm
+        onSubmit={({ title }) => { handleSubmit(title); }}
+        onCancel={() => {
+          navigate(-1);
+        }}
+      />
+      {/* <div>
         <label>
           Todo内容
           <input
@@ -60,7 +68,7 @@ export default function TodoCreatePage() {
         <button onClick={handleSubmit} disabled={mutation.isPending}>
           {mutation.isPending ? "创建中..." : '创建Todo'}
         </button>
-      </footer>
+      </footer> */}
     </div>
   );
 }
