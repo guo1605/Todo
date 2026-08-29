@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 
 interface TodoFormProps {
   defaultValues?: Partial<TodoFormValues>;
+  isPending: boolean;
   onSubmit: (values: TodoFormValues) => void;
   onCancel?: () => void;
 }
@@ -13,7 +14,9 @@ interface TodoFormProps {
 export function TodoForm({
   defaultValues = { title: '' },
   onSubmit,
-  onCancel }: TodoFormProps) {
+  onCancel,
+  isPending
+}: TodoFormProps) {
   // TODO: 使用 react-hook-form 和 zod 进行表单验证
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TodoFormValues>({
     resolver: zodResolver(todoTitleSchema),
@@ -22,7 +25,6 @@ export function TodoForm({
 
   // ✅ 关键：标记是否是首次渲染（跳过首次 reset，因为 useForm 已经初始化了）
   const isFirstRender = useRef(true);
-
 
   useEffect(() => {
     // 跳过首次渲染
@@ -37,6 +39,10 @@ export function TodoForm({
 
   }, [defaultValues]);
 
+  const handleClick = () => {
+    console.log('++++++', isSubmitting || isPending);
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div>
@@ -46,15 +52,16 @@ export function TodoForm({
           id="title"
           {...register("title")}
           placeholder="请输入Todo"
+          disabled={isSubmitting || isPending}
         />
 
         {errors.title && <p>{errors.title.message}</p>}
       </div>
-      <button type="button" onClick={onCancel}>
+      <button type="button" onClick={onCancel} disabled={isSubmitting || isPending}>
         取消
       </button>
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "提交中..." : "添加"}
+      <button type="submit" disabled={isSubmitting || isPending} onClick={handleClick}>
+        {isPending ? "提交中..." : "添加"}
       </button>
     </form>
   )

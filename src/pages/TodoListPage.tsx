@@ -1,21 +1,16 @@
 import { useEffect, useMemo } from "react";
-import { TodoList } from "../components/TodoList";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTodo } from "../context/TodoContext";
-import { getTodos } from "../services/todo";
-import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryTodos } from "../hooks/useQueryTodos";
+import TodoList from "../components/TodoList";
 
 export default function TodoListPage() {
-  const { todos, updateTodos } = useTodo();
+  const navigte = useNavigate();
   const [searchParams] = useSearchParams();
   const status = searchParams.get('status');
-
+  const { todos, updateTodos } = useTodo();
   // 使用useQuery获取数据
-  const { data, isPending, isError, refetch } = useQuery({
-    queryKey: ["todos"],
-    queryFn: getTodos,
-    staleTime: 1000 * 60 * 5, // 缓存5分钟
-  });
+  const { data, isPending, isError, refetch } = useQueryTodos();
 
   useEffect(() => {
     if (data) {
@@ -31,11 +26,16 @@ export default function TodoListPage() {
     return todos;
   }, [todos, status]);
 
+  // 跳转详情页面
+  const onPageJump = (id: number) => {
+    navigte(`/todos/${id}`)
+  }
+
   const renderContent = () => {
     if (isPending) return <div>正在加载</div>;
     if (isError) return <div>加载失败，<button onClick={() => { refetch() }}>重试</button></div>;
     if (filteredTodos.length === 0) return <div>暂无Todo</div>;
-    return <TodoList todos={filteredTodos} />;
+    return <TodoList todos={filteredTodos} onPageJump={onPageJump} />;
   }
 
   return (

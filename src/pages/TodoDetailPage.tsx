@@ -1,45 +1,24 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteTodo_s, getTodo } from "../services/todo";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { useQueryTodo } from "../hooks/useQueryTodo";
+import { useTodoMutation } from "../hooks/useTodoMutation";
 
 export default function TodoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
+  const { deleteTodo, isDeteleing } = useTodoMutation();
   // 使用useQuery获取数据
-  const { data: todo, isPending, isError, error, refetch } = useQuery({
-    queryKey: ['todo', id],
-    queryFn: () => {
-      if (!id) throw new Error("ID 缺失");
-      return getTodo(Number(id));
-    },
-    // staleTime: 1000 * 60 * 5, // 缓存5分钟
-    enabled: !!id, // 只有当id存在时才执行查询
-  });
-
+  const { data: todo, isPending, isError, error, refetch } = useQueryTodo(Number(id));
   if (isError) {
     console.error("获取Todo详情失败:", error);
   };
-
-  // 使用useMutation处理删除操作 
-  const mutation = useMutation({
-    mutationFn: deleteTodo_s,
-    onSuccess: () => {
-      // 在成功删除Todo后，刷新Todo列表数据
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      navigate(`/todos`);
-    },
-    onError: (err: Error) => {
-      console.error("删除失败:", err);
-    }
-  });
 
   const handleDelete = async () => {
     if (!todo) return;
     if (!window.confirm(`确定要删除 "${todo.title}" 吗？`)) return;
 
-    mutation.mutate(Number(id));
+    deleteTodo(Number(id));
   };
 
   const handleEdit = () => {
@@ -70,11 +49,11 @@ export default function TodoDetailPage() {
         <p>状态：{todo.completed ? "已完成" : "进行中"}</p>
       </main>
       <footer>
-        <button onClick={handleEdit} disabled={mutation.isPending}>
+        <button onClick={handleEdit} disabled={isDeteleing}>
           编辑
         </button>
-        <button onClick={handleDelete} disabled={mutation.isPending}>
-          {mutation.isPending ? "删除中..." : "删除"}
+        <button onClick={handleDelete} disabled={isDeteleing}>
+          {isDeteleing ? "删除中..." : "删除"}
         </button>
       </footer>
     </div>

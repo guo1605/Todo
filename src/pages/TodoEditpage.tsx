@@ -1,27 +1,19 @@
 import { useEffect, useState } from "react";
-import { getTodo, updateTodo_s } from "../services/todo";
 import { useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useQueryTodo } from "../hooks/useQueryTodo";
+import { useTodoMutation } from "../hooks/useTodoMutation";
 import { TodoForm } from "../components/TodoForm";
 
 export default function TodoEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
+  const { updateTodo, isUpdateing } = useTodoMutation();
   const [newTitle, setNewTitle] = useState<string>('');
-  // const [errorInfo, setErrorInfo] = useState<string | null>(null);
 
   // 使用useQuery获取数据
-  const { data: todo, isPending, isError, error, refetch } = useQuery({
-    queryKey: ['todo', id],
-    queryFn: () => {
-      if (!id) throw new Error("ID 缺失");
-      return getTodo(Number(id));
-    },
-    enabled: !!id, // 只有当id存在时才执行查询
-  });
+  const { data: todo, isPending, isError, error, refetch } = useQueryTodo(Number(id));
 
   useEffect(() => {
     if (todo) {
@@ -33,43 +25,9 @@ export default function TodoEditPage() {
     console.error("获取Todo失败:", error);
   }
 
-  // 使用useMutation处理保存操作
-  const mutation = useMutation({
-    mutationFn: ({ id, title }: { id: number, title: string }) => {
-      return updateTodo_s(id, { title });
-    },
-    onSuccess: () => {
-      // 在成功更新Todo后，刷新Todo列表数据
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      navigate(`/todos`);
-    },
-    onError: (err: Error) => {
-      console.error("更新失败:", err);
-      // setErrorInfo("保存失败，请重试");
-    }
-  });
-
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   setNewTitle(e.target.value);
-  //   if (errorInfo) {
-  //     setErrorInfo(null);
-  //   }
-  // }
-
   const handleUpdate = async (title: string) => {
-    // const trimmed = newTitle.trim();
-    // if (!trimmed) {
-    //   setErrorInfo("请输入Todo内容");
-    //   return;
-    // }
-    // if (todo && trimmed === todo.title) {
-    //   // 标题未变，直接返回列表或给出提示
-    //   navigate("/todos");
-    //   return;
-    // }
 
-    // setErrorInfo(null);
-    mutation.mutate({ id: Number(id), title: title });
+    updateTodo({ id: Number(id), data: { title } });
   }
 
   // 取消
@@ -99,6 +57,7 @@ export default function TodoEditPage() {
       <h1>编辑Todo</h1>
       <TodoForm
         defaultValues={{ title: newTitle }}
+        isPending={isUpdateing}
         onSubmit={({ title }) => {
           handleUpdate(title);
         }}

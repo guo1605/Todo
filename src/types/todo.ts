@@ -11,12 +11,14 @@ export interface TodoFormProps {
 
 export interface TodoItemProps {
   todo: Todo;
-  // onToggle: (id: number, completed: boolean) => void;
+  onToggle: (id: number, completed: boolean) => void;
+  onPageJump: (id: number) => void;
   // onDelete: (id: number) => void;
 }
 
 export interface TodoListProps {
   todos: Todo[];
+  onPageJump: (id: number) => void;
   // onToggle: (id: number, completed: boolean) => void;
   // onDelete: (id: number) => void;
 }
