@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useUIStore } from "../stores/UIStore";
 
 export default function TodoLayout() {
   const navigate = useNavigate();
-  const [isUnfold, setIsUnfold] = useState(true);
+  // const [isUnfold, setIsUnfold] = useState(true);
+  const { sidebarOpen } = useUIStore();
+  const toggleSidebar = useUIStore(state => state.toggleSidebar);
 
   return (
     <div className="todo-layout">
@@ -31,7 +34,7 @@ export default function TodoLayout() {
       {/* 主体 */}
       <div className="todo-body" style={{ display: "flex", flexDirection: "row", gap: "20px", margin: "20px" }}>
         {/* 侧边栏 */}
-        <aside className="todo-sidebar" style={{ display: isUnfold ? "block" : "none" }}>
+        <aside className="todo-sidebar" style={{ display: sidebarOpen ? "block" : "none" }}>
           <nav className="todo-nav" style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
             <NavLink
               to="/todos"
@@ -61,8 +64,8 @@ export default function TodoLayout() {
             </NavLink>
           </nav>
         </aside>
-        <button onClick={() => setIsUnfold(!isUnfold)} style={{ width: "30px", height: "100px" }}>
-          {isUnfold ? "收起" : "展开"}导航
+        <button onClick={() => toggleSidebar()} style={{ width: "30px", height: "100px" }}>
+          {sidebarOpen ? "收起" : "展开"}导航
         </button>
         {/* 页面内容 */}
         <main className="todo-main">
